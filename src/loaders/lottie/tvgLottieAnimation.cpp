@@ -39,12 +39,12 @@ uint32_t LottieAnimation::gen(const char* slot) noexcept
 }
 
 
-Result LottieAnimation::apply(uint32_t id) noexcept
+Result LottieAnimation::apply(uint32_t id, float progress) noexcept
 {
     auto loader = to<PictureImpl>(pImpl->picture)->loader;
     if (!loader) return Result::InsufficientCondition;
 
-    if (static_cast<LottieLoader*>(loader)->apply(id)) {
+    if (static_cast<LottieLoader*>(loader)->apply(id, false, progress)) {
         PAINT(pImpl->picture)->mark(RenderUpdateFlag::All);
         return Result::Success;
     }

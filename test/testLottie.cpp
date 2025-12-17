@@ -164,6 +164,49 @@ TEST_CASE("Lottie Slot", "[tvgLottie]")
     REQUIRE(Initializer::term() == Result::Success);
 }
 
+TEST_CASE("Lottie Slot Transition", "[tvgLottie]")
+{
+    REQUIRE(Initializer::init() == Result::Success);
+    {
+        auto animation = unique_ptr<LottieAnimation>(LottieAnimation::gen());
+        REQUIRE(animation);
+
+        auto picture = animation->picture();
+
+        REQUIRE(picture->load(TEST_DIR"/slot.lot") == Result::Success);
+
+        //Color slot for transition testing
+        const char* colorSlot = R"({"lottie-icon-outline":{"p":{"a":0,"k":[1,0,0]}}})";
+        auto id = animation->gen(colorSlot);
+        REQUIRE(id > 0);
+
+        //Transition with various progress values
+        REQUIRE(animation->apply(id, 0.0f) == Result::Success);
+        REQUIRE(animation->apply(id, 0.5f) == Result::Success);
+        REQUIRE(animation->apply(id, 1.0f) == Result::Success);
+
+        //Reset and transition again
+        REQUIRE(animation->apply(0) == Result::Success);
+        REQUIRE(animation->apply(id, 0.5f) == Result::Success);
+        REQUIRE(animation->apply(id, 1.0f) == Result::Success);
+
+        REQUIRE(animation->del(id) == Result::Success);
+
+        //Gradient colorstop slot for transition testing
+        const char* gradientSlot = R"({"gradient_fill":{"p":{"p":2,"k":{"a":0,"k":[0,0.1,0.1,0.2,1,1,0.1,0.2,0.1,1]}}}})";
+        auto id2 = animation->gen(gradientSlot);
+        REQUIRE(id2 > 0);
+
+        //Transition gradient with various progress values
+        REQUIRE(animation->apply(id2, 0.0f) == Result::Success);
+        REQUIRE(animation->apply(id2, 0.5f) == Result::Success);
+        REQUIRE(animation->apply(id2, 1.0f) == Result::Success);
+
+        REQUIRE(animation->del(id2) == Result::Success);
+    }
+    REQUIRE(Initializer::term() == Result::Success);
+}
+
 TEST_CASE("Lottie Marker", "[tvgLottie]")
 {
     REQUIRE(Initializer::init() == Result::Success);

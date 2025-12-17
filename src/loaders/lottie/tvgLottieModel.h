@@ -1060,7 +1060,7 @@ struct LottieSlot
     };
 
     void add(uint32_t slotcode, LottieProperty* prop);
-    void apply(LottieProperty* prop, bool byDefault = false);
+    void apply(LottieProperty* prop, bool byDefault = false, float progress = 1.0f);
     void reset();
 
     LottieSlot(LottieLayer* layer, LottieObject* parent, unsigned long sid, LottieObject* obj, LottieProperty::Type type) : context{layer, parent}, sid(sid), type(type)
@@ -1082,6 +1082,7 @@ struct LottieSlot
     unsigned long sid;    // djb2 encoded
     Array<Pair> pairs;    // object-property pairs that can be overridden by this slot
     LottieProperty::Type type;
+    LottieProperty* transitionProp = nullptr;  // property being transitioned to
 
     bool overridden = false;
 };

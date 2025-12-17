@@ -280,11 +280,17 @@ Paint* LottieLoader::paint()
 }
 
 
-bool LottieLoader::apply(uint32_t slotcode, bool byDefault)
+bool LottieLoader::apply(uint32_t slotcode, bool byDefault, float progress)
 {
-    if (curSlot == slotcode) return true;
+    if (curSlot == slotcode && tvg::equal(progress, 1.0f)) return true;
 
     if (!ready() || comp->slots.count == 0) return false;
+
+    //progress 0.0 means show current state, no change needed
+    if (tvg::zero(progress)) {
+        build = true;
+        return true;
+    }
 
     auto applied = false;
 
@@ -298,13 +304,13 @@ bool LottieLoader::apply(uint32_t slotcode, bool byDefault)
             if (slot->code != slotcode) continue;
             //apply the custom slot property to the targets.
             ARRAY_FOREACH(p, slot->props) {
-                p->target->apply(p->prop, byDefault);
+                p->target->apply(p->prop, byDefault, progress);
             }
             applied = true;
             break;
         }
     }
-    curSlot = slotcode;
+    if (tvg::equal(progress, 1.0f)) curSlot = slotcode;
     if (applied) build = true;
     return applied;
 }

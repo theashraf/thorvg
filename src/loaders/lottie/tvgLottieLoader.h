@@ -82,7 +82,7 @@ public:
 
     //Slot Methods
     uint32_t gen(const char* slot, bool byDefault = false);
-    bool apply(uint32_t slotcode, bool byDefault = false);
+    bool apply(uint32_t slotcode, bool byDefault = false, float progress = 1.0f);
     bool del(uint32_t slotcode, bool byDefault = false);
 
     //Frame Controls

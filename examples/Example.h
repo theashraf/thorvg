@@ -72,6 +72,7 @@ struct Example
     virtual bool clickdown(tvg::Canvas* canvas, int32_t x, int32_t y) { return false; }
     virtual bool clickup(tvg::Canvas* canvas, int32_t x, int32_t y) { return false; }
     virtual bool motion(tvg::Canvas* canvas, int32_t x, int32_t y) { return false; }
+    virtual bool keydown(tvg::Canvas* canvas, int32_t key) { return false; }
     virtual void populate(const char* path) {}
     virtual ~Example() {}
 
@@ -260,6 +261,10 @@ struct Window
                         if (event.key.keysym.sym == SDLK_ESCAPE) {
                             running = false;
                         }
+                        break;
+                    }
+                    case SDL_KEYDOWN: {
+                        needDraw |= example->keydown(canvas, event.key.keysym.sym);
                         break;
                     }
                     case SDL_MOUSEBUTTONDOWN: {

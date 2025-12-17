@@ -124,14 +124,21 @@ public:
      * If the provided slot ID is 0, all previously applied slots will be reset.
      *
      * @param[in] id The ID of the slot to apply. Use 0 to reset all slots.
+     * @param[in] progress The transition progress from current state to the slot (0.0 to 1.0).
+     *                     Use 1.0 for instant application (default). Values less than 1.0 enable
+     *                     smooth interpolation between the current state and the target slot.
      *
      * @retval Result::InvalidArguments If the animation is not loaded or the slot ID is invalid.
+     *
+     * @note For interpolatable properties (Color, Opacity, Float, Scalar, Vector, ColorStop),
+     *       values are linearly interpolated. Non-interpolatable properties (TextDoc, Image)
+     *       switch instantly when progress reaches 1.0.
      *
      * @see gen(const char* slot)
      *
      * @since 1.0
      */
-    Result apply(uint32_t id) noexcept;
+    Result apply(uint32_t id, float progress = 1.0f) noexcept;
 
     /**
      * @brief Deletes a previously generated slot.

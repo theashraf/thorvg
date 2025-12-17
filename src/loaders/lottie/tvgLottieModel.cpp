@@ -190,6 +190,51 @@ Point LottieTextFollowPath::position(float lenSearched, float& angle)
 
 void LottieSlot::reset()
 {
+    //Clear any active blend state
+    ARRAY_FOREACH(pair, pairs) {
+        if (!pair->obj) continue;
+        switch (type) {
+            case LottieProperty::Type::Float: {
+                static_cast<LottieTransform*>(pair->obj)->rotation.endBlend();
+                break;
+            }
+            case LottieProperty::Type::Scalar: {
+                if (pair->obj->type == LottieObject::Type::Transform) {
+                    static_cast<LottieTransform*>(pair->obj)->scale.endBlend();
+                } else if (pair->obj->type == LottieObject::Type::Rect) {
+                    static_cast<LottieRect*>(pair->obj)->size.endBlend();
+                } else if (pair->obj->type == LottieObject::Type::Ellipse) {
+                    static_cast<LottieEllipse*>(pair->obj)->size.endBlend();
+                }
+                break;
+            }
+            case LottieProperty::Type::Vector: {
+                static_cast<LottieTransform*>(pair->obj)->position.endBlend();
+                break;
+            }
+            case LottieProperty::Type::Color: {
+                static_cast<LottieSolid*>(pair->obj)->color.endBlend();
+                break;
+            }
+            case LottieProperty::Type::Opacity: {
+                if (pair->obj->type == LottieObject::Type::Transform) {
+                    static_cast<LottieTransform*>(pair->obj)->opacity.endBlend();
+                } else if (pair->obj->type == LottieObject::Type::GradientFill || pair->obj->type == LottieObject::Type::GradientStroke) {
+                    static_cast<LottieGradient*>(pair->obj)->opacity.endBlend();
+                } else {
+                    static_cast<LottieSolid*>(pair->obj)->opacity.endBlend();
+                }
+                break;
+            }
+            case LottieProperty::Type::ColorStop: {
+                static_cast<LottieGradient*>(pair->obj)->colorStops.endBlend();
+                break;
+            }
+            default: break;
+        }
+    }
+    transitionProp = nullptr;
+
     if (!overridden) return;
 
     ARRAY_FOREACH(pair, pairs) {
@@ -201,62 +246,123 @@ void LottieSlot::reset()
 }
 
 
-void LottieSlot::apply(LottieProperty* prop, bool byDefault)
+void LottieSlot::apply(LottieProperty* prop, bool byDefault, float progress)
 {
     auto copy = !overridden && !byDefault;
+    auto blending = progress < 1.0f;
+
+    transitionProp = blending ? prop : nullptr;
 
     //apply slot object to all targets
     ARRAY_FOREACH(pair, pairs) {
+        if (!pair->obj) continue;
         //backup the original properties before overwriting
         switch (type) {
             case LottieProperty::Type::Float: {
-                if (copy) pair->prop = new LottieFloat(static_cast<LottieTransform*>(pair->obj)->rotation);
-                pair->obj->override(prop, !copy);
+                auto& target = static_cast<LottieTransform*>(pair->obj)->rotation;
+                if (copy) pair->prop = new LottieFloat(target);
+                if (blending) target.blend(static_cast<LottieFloat*>(prop), progress);
+                else {
+                    target.endBlend();
+                    pair->obj->override(prop, !copy);
+                }
                 break;
             }
             case LottieProperty::Type::Scalar: {
-                if (copy) pair->prop = new LottieScalar(static_cast<LottieTransform*>(pair->obj)->scale);
-                pair->obj->override(prop, !copy);
+                if (pair->obj->type == LottieObject::Type::Transform) {
+                    auto& target = static_cast<LottieTransform*>(pair->obj)->scale;
+                    if (copy) pair->prop = new LottieScalar(target);
+                    if (blending) target.blend(static_cast<LottieScalar*>(prop), progress);
+                    else {
+                        target.endBlend();
+                        pair->obj->override(prop, !copy);
+                    }
+                } else if (pair->obj->type == LottieObject::Type::Rect) {
+                    auto& target = static_cast<LottieRect*>(pair->obj)->size;
+                    if (copy) pair->prop = new LottieScalar(target);
+                    if (blending) target.blend(static_cast<LottieScalar*>(prop), progress);
+                    else {
+                        target.endBlend();
+                        pair->obj->override(prop, !copy);
+                    }
+                } else if (pair->obj->type == LottieObject::Type::Ellipse) {
+                    auto& target = static_cast<LottieEllipse*>(pair->obj)->size;
+                    if (copy) pair->prop = new LottieScalar(target);
+                    if (blending) target.blend(static_cast<LottieScalar*>(prop), progress);
+                    else {
+                        target.endBlend();
+                        pair->obj->override(prop, !copy);
+                    }
+                }
                 break;
             }
             case LottieProperty::Type::Vector: {
-                if (copy) pair->prop = new LottieVector(static_cast<LottieTransform*>(pair->obj)->position);
-                pair->obj->override(prop, !copy);
+                auto& target = static_cast<LottieTransform*>(pair->obj)->position;
+                if (copy) pair->prop = new LottieVector(target);
+                if (blending) target.blend(static_cast<LottieVector*>(prop), progress);
+                else {
+                    target.endBlend();
+                    pair->obj->override(prop, !copy);
+                }
                 break;
             }
             case LottieProperty::Type::Color: {
-                if (copy) pair->prop = new LottieColor(static_cast<LottieSolid*>(pair->obj)->color);
-                pair->obj->override(prop, !copy);
+                auto& target = static_cast<LottieSolid*>(pair->obj)->color;
+                if (copy) pair->prop = new LottieColor(target);
+                if (blending) target.blend(static_cast<LottieColor*>(prop), progress);
+                else {
+                    target.endBlend();
+                    pair->obj->override(prop, !copy);
+                }
                 break;
             }
             case LottieProperty::Type::Opacity: {
-                if (copy) {
-                    if (pair->obj->type == LottieObject::Type::Transform) pair->prop = new LottieOpacity(static_cast<LottieTransform*>(pair->obj)->opacity);
-                    else pair->prop = new LottieOpacity(static_cast<LottieSolid*>(pair->obj)->opacity);
+                if (pair->obj->type == LottieObject::Type::Transform) {
+                    auto& target = static_cast<LottieTransform*>(pair->obj)->opacity;
+                    if (copy) pair->prop = new LottieOpacity(target);
+                    if (blending) target.blend(static_cast<LottieOpacity*>(prop), progress);
+                    else {
+                        target.endBlend();
+                        pair->obj->override(prop, !copy);
+                    }
+                } else {
+                    auto& target = static_cast<LottieSolid*>(pair->obj)->opacity;
+                    if (copy) pair->prop = new LottieOpacity(target);
+                    if (blending) target.blend(static_cast<LottieOpacity*>(prop), progress);
+                    else {
+                        target.endBlend();
+                        pair->obj->override(prop, !copy);
+                    }
                 }
-                pair->obj->override(prop, !copy);
                 break;
             }
             case LottieProperty::Type::ColorStop: {
-                if (copy) pair->prop = new LottieColorStop(static_cast<LottieGradient*>(pair->obj)->colorStops);
-                pair->obj->override(prop, !copy);
+                auto& target = static_cast<LottieGradient*>(pair->obj)->colorStops;
+                if (copy) pair->prop = new LottieColorStop(target);
+                if (blending) target.blend(static_cast<LottieColorStop*>(prop), progress);
+                else {
+                    target.endBlend();
+                    pair->obj->override(prop, !copy);
+                }
                 break;
             }
             case LottieProperty::Type::TextDoc: {
+                //TextDoc cannot be interpolated, apply only when progress >= 1.0
                 if (copy) pair->prop = new LottieTextDoc(static_cast<LottieText*>(pair->obj)->doc);
-                pair->obj->override(prop, !copy);
+                if (!blending) pair->obj->override(prop, !copy);
                 break;
             }
             case LottieProperty::Type::Image: {
+                //Image cannot be interpolated, apply only when progress >= 1.0
                 if (copy) pair->prop = new LottieBitmap(static_cast<LottieImage*>(pair->obj)->bitmap);
-                pair->obj->override(prop, !copy);
+                if (!blending) pair->obj->override(prop, !copy);
                 break;
             }
             default: break;
         }
     }
 
-    if (!byDefault) overridden = true;
+    if (!byDefault && !blending) overridden = true;
 }
 
 

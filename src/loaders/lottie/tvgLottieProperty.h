@@ -319,6 +319,10 @@ struct LottieGenericProperty : LottieProperty
     Array<Frame>* frames = nullptr;
     Value value;
 
+    //Slot transition blending
+    MyProperty* blendTarget = nullptr;
+    float blendProgress = 1.0f;
+
     LottieGenericProperty(Value v) : LottieProperty(PType), value(v) {}
 
     LottieGenericProperty() : LottieProperty(PType) {}
@@ -341,6 +345,8 @@ struct LottieGenericProperty : LottieProperty
             delete(exp);
             exp = nullptr;
         }
+        blendTarget = nullptr;
+        blendProgress = 1.0f;
     }
 
     uint32_t nearest(float frameNo) override
@@ -380,7 +386,7 @@ struct LottieGenericProperty : LottieProperty
         return (*frames)[frames->count];
     }
 
-    Value operator()(float frameNo, LottieExpressions* exps = nullptr)
+    Value evaluate(float frameNo, LottieExpressions* exps = nullptr)
     {
         //overriding with expressions
         if (exps && exp) {
@@ -395,6 +401,16 @@ struct LottieGenericProperty : LottieProperty
         auto frame = frames->data + _bsearch(frames, frameNo);
         if (tvg::equal(frame->no, frameNo)) return frame->value;
         return frame->interpolate(frame + 1, frameNo);
+    }
+
+    Value operator()(float frameNo, LottieExpressions* exps = nullptr)
+    {
+        auto val = evaluate(frameNo, exps);
+        //slot transition blending
+        if (blendTarget && blendProgress > 0.0f && blendProgress < 1.0f) {
+            return tvg::lerp(val, blendTarget->evaluate(frameNo, exps), blendProgress);
+        }
+        return val;
     }
 
     Value operator()(float frameNo, Tween& tween, LottieExpressions* exps)
@@ -448,6 +464,18 @@ struct LottieGenericProperty : LottieProperty
         for (auto frame = frames->begin() + 1; frame < frames->end(); ++frame) {
             (frame - 1)->prepare(frame);
         }
+    }
+
+    void blend(MyProperty* target, float progress)
+    {
+        blendTarget = target;
+        blendProgress = progress;
+    }
+
+    void endBlend()
+    {
+        blendTarget = nullptr;
+        blendProgress = 1.0f;
     }
 };
 
@@ -648,6 +676,10 @@ struct LottieColorStop : LottieProperty
     uint16_t count = 0;     //colorstop count
     bool populated = false;
 
+    //Slot transition blending
+    LottieColorStop* blendTarget = nullptr;
+    float blendProgress = 1.0f;
+
     LottieColorStop() : LottieProperty(LottieProperty::Type::ColorStop) {}
 
     LottieColorStop(const LottieColorStop& rhs)
@@ -680,6 +712,9 @@ struct LottieColorStop : LottieProperty
         tvg::free(frames->data);
         tvg::free(frames);
         frames = nullptr;
+
+        blendTarget = nullptr;
+        blendProgress = 1.0f;
     }
 
     uint32_t nearest(float frameNo) override
@@ -721,17 +756,57 @@ struct LottieColorStop : LottieProperty
         return (*frames)[frames->count];
     }
 
+    void blend(LottieColorStop* target, float progress)
+    {
+        blendTarget = target;
+        blendProgress = progress;
+    }
+
+    void endBlend()
+    {
+        blendTarget = nullptr;
+        blendProgress = 1.0f;
+    }
+
+    Result blending(float frameNo, Fill* fill, LottieExpressions* exps)
+    {
+        //from (current)
+        evaluate(frameNo, fill, exps);
+
+        //to (target)
+        auto dup = fill->duplicate();
+        blendTarget->evaluate(frameNo, dup, exps);
+
+        //interpolate
+        const Fill::ColorStop* from;
+        auto fromCnt = fill->colorStops(&from);
+
+        const Fill::ColorStop* to;
+        dup->colorStops(&to);
+
+        for (uint32_t i = 0; i < fromCnt; ++i) {
+            const_cast<Fill::ColorStop*>(from)[i].offset = tvg::lerp(from[i].offset, to[i].offset, blendProgress);
+            const_cast<Fill::ColorStop*>(from)[i].r = tvg::lerp(from[i].r, to[i].r, blendProgress);
+            const_cast<Fill::ColorStop*>(from)[i].g = tvg::lerp(from[i].g, to[i].g, blendProgress);
+            const_cast<Fill::ColorStop*>(from)[i].b = tvg::lerp(from[i].b, to[i].b, blendProgress);
+            const_cast<Fill::ColorStop*>(from)[i].a = tvg::lerp(from[i].a, to[i].a, blendProgress);
+        }
+
+        delete(dup);
+        return Result::Success;
+    }
+
     Result tweening(float frameNo, Fill* fill, Tween& tween, LottieExpressions* exps)
     {
         auto frame = frames->data + _bsearch(frames, frameNo);
         if (tvg::equal(frame->no, frameNo)) return fill->colorStops(frame->value.data, count);
 
         //from
-        operator()(frameNo, fill, exps);
+        evaluate(frameNo, fill, exps);
 
         //to
         auto dup = fill->duplicate();
-        operator()(tween.frameNo, dup, exps);
+        evaluate(tween.frameNo, dup, exps);
 
         //interpolate
         const Fill::ColorStop* from;
@@ -753,7 +828,7 @@ struct LottieColorStop : LottieProperty
         return Result::Success;
     }
 
-    Result operator()(float frameNo, Fill* fill, LottieExpressions* exps = nullptr)
+    Result evaluate(float frameNo, Fill* fill, LottieExpressions* exps = nullptr)
     {
         //overriding with expressions
         if (exps && exp) {
@@ -794,6 +869,15 @@ struct LottieColorStop : LottieProperty
             result.push({offset, r, g, b, a});
         }
         return fill->colorStops(result.data, count);
+    }
+
+    Result operator()(float frameNo, Fill* fill, LottieExpressions* exps = nullptr)
+    {
+        //slot transition blending
+        if (blendTarget && blendProgress > 0.0f && blendProgress < 1.0f) {
+            return blending(frameNo, fill, exps);
+        }
+        return evaluate(frameNo, fill, exps);
     }
 
     Result operator()(float frameNo, Fill* fill, Tween& tween, LottieExpressions* exps)

@@ -79,7 +79,7 @@ if gif_saver
 endif
 
 if lottie_loader
-    source_file += ['LottieExtension.cpp', 'LottieTweening.cpp']
+    source_file += ['LottieExtension.cpp', 'LottieTweening.cpp', 'SlotTransition.cpp']
 endif
 
 if lottie_expressions
