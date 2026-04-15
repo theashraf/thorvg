@@ -109,6 +109,9 @@ if get_option('simd')
   elif host_machine.cpu().startswith('aarch')
     config_h.set10('THORVG_NEON_VECTOR_SUPPORT', true)
     simd_type = 'neon-aarch'
+  elif host_machine.system() == 'emscripten'
+    config_h.set10('THORVG_WASM_SIMD_SUPPORT', true)
+    simd_type = 'wasm-simd128'
   endif
 endif
 

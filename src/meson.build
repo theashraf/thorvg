@@ -38,6 +38,9 @@ else
     if simd_type == 'neon-arm'
         compiler_flags += ['-mfpu=neon']
     endif
+    if simd_type == 'wasm-simd128'
+        compiler_flags += ['-msimd128']
+    endif
     compiler_flags += ['-Wno-unknown-pragmas']
 
     if logging == false

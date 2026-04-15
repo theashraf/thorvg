@@ -242,6 +242,7 @@ static bool _compositeMaskImage(SwSurface* surface, const SwImage& image, const 
 #include "tvgSwRasterC.h"
 #include "tvgSwRasterAvx.h"
 #include "tvgSwRasterNeon.h"
+#include "tvgSwRasterWasm.h"
 
 
 static inline uint32_t _sampleSize(float scale)
@@ -442,6 +443,8 @@ static bool _rasterTranslucentRect(SwSurface* surface, const RenderRegion& bbox,
     return avxRasterTranslucentRect(surface, bbox, c);
 #elif defined(THORVG_NEON_VECTOR_SUPPORT)
     return neonRasterTranslucentRect(surface, bbox, c);
+#elif defined(THORVG_WASM_SIMD_SUPPORT)
+    return wasmRasterTranslucentRect(surface, bbox, c);
 #else
     return cRasterTranslucentRect(surface, bbox, c);
 #endif
@@ -622,6 +625,8 @@ static bool _rasterTranslucentRle(SwSurface* surface, const SwRle* rle, const Re
     return avxRasterTranslucentRle(surface, rle, bbox, c);
 #elif defined(THORVG_NEON_VECTOR_SUPPORT)
     return neonRasterTranslucentRle(surface, rle, bbox, c);
+#elif defined(THORVG_WASM_SIMD_SUPPORT)
+    return wasmRasterTranslucentRle(surface, rle, bbox, c);
 #else
     return cRasterTranslucentRle(surface, rle, bbox, c);
 #endif
@@ -1472,6 +1477,8 @@ void rasterGrayscale8(uint8_t *dst, uint8_t val, uint32_t offset, int32_t len)
     avxRasterGrayscale8(dst, val, offset, len);
 #elif defined(THORVG_NEON_VECTOR_SUPPORT)
     neonRasterGrayscale8(dst, val, offset, len);
+#elif defined(THORVG_WASM_SIMD_SUPPORT)
+    wasmRasterGrayscale8(dst, val, offset, len);
 #else
     cRasterPixels(dst, val, offset, len);
 #endif
@@ -1484,6 +1491,8 @@ void rasterPixel32(uint32_t *dst, uint32_t val, uint32_t offset, int32_t len)
     avxRasterPixel32(dst, val, offset, len);
 #elif defined(THORVG_NEON_VECTOR_SUPPORT)
     neonRasterPixel32(dst, val, offset, len);
+#elif defined(THORVG_WASM_SIMD_SUPPORT)
+    wasmRasterPixel32(dst, val, offset, len);
 #else
     cRasterPixels(dst, val, offset, len);
 #endif
