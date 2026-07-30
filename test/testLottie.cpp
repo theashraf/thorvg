@@ -162,6 +162,25 @@ TEST_CASE("Lottie Slot", "[tvgLottie]")
         REQUIRE(animation->apply(id9) == Result::Success);
         REQUIRE(animation->apply(0) == Result::Success);
         REQUIRE(animation->del(id9) == Result::Success);
+
+        //Slot Test 7: Time Remap (static, in seconds)
+        const char* timeRemapSlot = R"({"time_remap":{"p":{"a":0,"k":1.5}}})";
+        auto id10 = animation->gen(timeRemapSlot);
+        REQUIRE(id10 > 0);
+        REQUIRE(animation->apply(id10) == Result::Success);
+        REQUIRE(animation->apply(0) == Result::Success);
+        REQUIRE(animation->del(id10) == Result::Success);
+
+        //Slot Test 8: Time Remap (animated, reversed playback)
+        const char* timeRemapSlot2 = R"({"time_remap":{"p":{"a":1,"k":[{"i":{"x":0.833,"y":0.833},"o":{"x":0.167,"y":0.167},"s":[3],"t":0},{"s":[0],"t":180}]}}})";
+        auto id11 = animation->gen(timeRemapSlot2);
+        REQUIRE(id11 > 0);
+        REQUIRE(animation->apply(id11) == Result::Success);
+        REQUIRE(animation->apply(0) == Result::Success);
+        REQUIRE(animation->del(id11) == Result::Success);
+
+        //Negative: a sid on a property whose owner is not overridable must not register
+        REQUIRE(animation->gen(R"({"unsupported_slot":{"p":{"a":0,"k":[50,50]}}})") == 0);
     }
     REQUIRE(Initializer::term() == Result::Success);
 }

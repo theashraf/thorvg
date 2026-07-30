@@ -481,6 +481,12 @@ void LottieParser::parsePropertyInternal(T& prop)
 
 void LottieParser::registerSlot(LottieObject* obj, const char* sid, LottieProperty& prop)
 {
+    //the property owner must be identified to be overridden.
+    if (!obj) {
+        TVGERR("LOTTIE", "Slot(%s) is not overridable", sid);
+        return;
+    }
+
     auto val = djb2Encode(sid);
 
     //append object if the slot already exists.
@@ -1256,7 +1262,7 @@ LottieObject* LottieParser::parseGroup()
 
 void LottieParser::parseTimeRemap(LottieLayer* layer)
 {
-    parseProperty(layer->timeRemap);
+    parseProperty(layer->timeRemap, layer);
 }
 
 
