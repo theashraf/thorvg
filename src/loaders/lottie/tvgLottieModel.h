@@ -829,30 +829,67 @@ struct LottieGradientStroke : LottieGradient, LottieStroke
 
 struct LottieImage : LottieObject
 {
-    LottieAsset asset;
+#ifdef THORVG_MEDIA_LOADER_SUPPORT
+    Video* video = nullptr;
+#endif
     Picture* picture = nullptr;
+    LottieAsset asset;
     bool valid = false;
+    bool playing = false;
 
     LottieImage() : LottieObject(LottieObject::Image) {}
 
     ~LottieImage()
     {
-        if (picture) picture->unref();
+        release();
     }
 
-    LottieProperty* override(LottieProperty* prop, bool release) override
+    void release()
     {
+#ifdef THORVG_MEDIA_LOADER_SUPPORT
+        delete (video);
+        video = nullptr;
+        picture = nullptr;
+#else
         if (picture) {
             picture->unref();
             picture = nullptr;
         }
+#endif
+    }
+
+    LottieProperty* override(LottieProperty* prop, bool release) override
+    {
+        LottieImage::release();
 
         LottieProperty* backup = nullptr;
         OVERRIDE(asset);
-
-        valid = false;
-
+        valid = playing = false;
         return backup;
+    }
+
+    void stop()
+    {
+#ifdef THORVG_MEDIA_LOADER_SUPPORT
+        if (playing) {
+            video->stop();
+            playing = false;
+        }
+#endif
+    }
+
+    void play(TVG_UNUSED float progress)
+    {
+#ifdef THORVG_MEDIA_LOADER_SUPPORT
+        // tolerance for seeking, to avoid unnecessary seek calls
+        auto time = video->time();
+        auto seek = progress * video->duration();
+        if (fabsf(time - seek) > 1.0f) video->seek(seek);
+        if (!playing) {
+            video->play();
+            playing = true;
+        }
+#endif
     }
 
     Picture* get();
@@ -863,6 +900,8 @@ struct LottieAudio : LottieObject
     AssetSrc src;
 
     LottieAudio() : LottieObject(LottieObject::Audio) {}
+
+    // TODO: override?
 };
 
 struct LottieRepeater : LottieObject
@@ -993,6 +1032,7 @@ struct LottieLayer : LottieRootLayer
 
     bool mergeable() override { return false; }
     void prepare(RGB32* color = nullptr);
+    void invalidate();
     LottieProperty* property(uint16_t ix) override;
 
     char* name = nullptr;
