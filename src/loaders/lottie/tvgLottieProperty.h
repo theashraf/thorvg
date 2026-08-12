@@ -935,8 +935,8 @@ struct LottieTextDoc : LottieProperty
 
 struct LottieAsset : LottieProperty, AssetSrc
 {
-    float width = 0.0f;
-    float height = 0.0f;
+    float width = -1.0f;
+    float height = -1.0f;
 
     LottieAsset() : LottieProperty(LottieProperty::Type::Image) {}
 
