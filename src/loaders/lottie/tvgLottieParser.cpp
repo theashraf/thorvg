@@ -1035,7 +1035,7 @@ void LottieParser::parseImage(LottieImage* image, const char* data, const char* 
     image->asset.height = height;
 }
 
-LottieObject* LottieParser::parseAsset()
+LottieObject* LottieParser::parseAsset(LottieProperty::Type type)
 {
     enterObject();
 
@@ -1046,8 +1046,8 @@ LottieObject* LottieParser::parseAsset()
     const char* sid = nullptr;
     const char* data = nullptr;
     const char* subPath = nullptr;
-    float width = 0.0f;
-    float height = 0.0f;
+    float width = -1.0f;
+    float height = -1.0f;
     auto embedded = false;
 
     while (auto key = nextObjectKey()) {
@@ -1069,7 +1069,7 @@ LottieObject* LottieParser::parseAsset()
         else skip();
     }
     if (data) {
-        if (!strncmp(data, "data:image/", 11) || width != 0.0f || height != 0.0f) {
+        if (type == LottieProperty::Type::Image || !strncmp(data, "data:image/", 11) || width >= 0.0f || height >= 0.0f) {
             obj = new LottieImage;
             parseImage(static_cast<LottieImage*>(obj), data, subPath, width, height, embedded);
             if (sid) registerSlot(static_cast<LottieImage*>(obj), sid, static_cast<LottieImage*>(obj)->asset);
@@ -1723,7 +1723,7 @@ LottieProperty* LottieParser::parse(LottieSlot* slot)
         case LottieProperty::Type::Image: {
             LottieObject* obj = nullptr;
             while (auto key = nextObjectKey()) {
-                if (KEY_AS("p")) obj = parseAsset();
+                if (KEY_AS("p")) obj = parseAsset(slot->type);
                 else skip();
             }
             if (!obj) return nullptr;

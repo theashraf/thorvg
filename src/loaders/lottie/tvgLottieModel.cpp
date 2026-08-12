@@ -308,7 +308,8 @@ Picture* LottieImage::get()
     auto result = Result::Unknown;
     if (asset.size > 0) result = picture->load(asset.data, asset.size, asset.mimeType);
     else if (asset.external) result = picture->load(asset.path);
-    picture->size(asset.width, asset.height);
+    //an asset may omit its dimensions. keep the natural size then.
+    if (asset.width >= 0.0f && asset.height >= 0.0f) picture->size(asset.width, asset.height);
     valid = (result == Result::Success);
 
     return picture;

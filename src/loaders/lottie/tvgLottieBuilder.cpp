@@ -976,7 +976,7 @@ void LottieBuilder::updateImage(LottieLayer* layer, float frameNo)
     //resolve an image asset if need
     if (resolver && !image->valid) {
         resolver->func(picture, image->asset.path, resolver->data);
-        picture->size(image->asset.width, image->asset.height);
+        if (image->asset.width >= 0.0f && image->asset.height >= 0.0f) picture->size(image->asset.width, image->asset.height);
         image->valid = true;
     }
 
