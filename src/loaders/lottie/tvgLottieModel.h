@@ -889,10 +889,10 @@ struct LottieImage : LottieObject
     void play(TVG_UNUSED float progress)
     {
 #ifdef THORVG_MEDIA_LOADER_SUPPORT
-        // tolerance for seeking, to avoid unnecessary seek calls
-        auto time = video->time();
-        auto seek = progress * video->duration();
-        if (fabsf(time - seek) > 1.0f) video->seek(seek);
+        //the animation clock is the master. hand the target to the backend on
+        //every tick and let it decide how to reach it - only the backend knows
+        //whether a seek is cheap.
+        video->seek(progress * video->duration());
         if (!playing) {
             video->play();
             playing = true;
